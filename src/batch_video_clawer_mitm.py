@@ -25,7 +25,7 @@ class batch_clawer_mitm():
         self.batch_size=int(conf.get("clawer","batch_size"))     #每一个pcap文件中包含的视频个数,称为一个batch
         self.batch_count=int(conf.get("clawer","batch_count"))      #总共播放多少个batch
         self.video_server=conf.get("clawer","video_server")#tencent bilibili youtube
-        self.ping_record_flag=int(conf.get("ping","ping_record_flag"))
+        self.ping_record_flag=int(conf.get("ping","ping_record_flag"))#是否采集时延信息
 
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.193 Safari/537.36'}
         self.driver=self.chrome_driver_init()
