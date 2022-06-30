@@ -12,7 +12,7 @@ class batch_clawer_mitm():
         conf= configparser.ConfigParser()
         conf.read(conf_path,encoding='UTF-8')
         self.tshark_interface_number =conf.get("sofware_path","tshark_interface_number") #"iphone_4g"  #tshark捕包的网络接口名字
-        self.chrome_driver_path =conf.get("sofware_path","chrome_driver_path")   #chrom_driver位置
+        self.chrome_driver_path =conf.get("sofware_path","chrome_driver_path")   #chromdriver位置 
         self.tshark_path =conf.get("sofware_path","tshark_path")  #TSHARK位置
         self.mitmproxy_path=conf.get("sofware_path","mitmproxy_path") #mitmdump 可执行文件位置
         self.mitm_py=conf.get("sofware_path","mitm_py")#mitm.py文件存放位置
