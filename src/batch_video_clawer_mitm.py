@@ -16,6 +16,7 @@ class batch_clawer_mitm():
         self.tshark_path =conf.get("sofware_path","tshark_path")  #TSHARK位置
         self.mitmproxy_path=conf.get("sofware_path","mitmproxy_path") #mitmdump 可执行文件位置
         self.mitm_py=conf.get("sofware_path","mitm_py")#mitm.py文件存放位置
+        self.chrome_user_data_path=conf.get("sofware_path","chrome_user_data_path")
 
         self.root_path =conf.get("record_path","root_path")  #记录根目录
         self.mitm_record_path=conf.get("record_path","mitm_record_path") #mitm记录的文件位置
@@ -38,7 +39,7 @@ class batch_clawer_mitm():
     def chrome_driver_init(self):
         options=webdriver.ChromeOptions()
         #options.add_argument('--disable-gpu')
-        #options.add_argument("--user-data-dir=C:\\Users\\admin\\AppData\\Local\\Google\\Chrome\\selenium_data")
+        options.add_argument("--user-data-dir="+self.chrome_user_data_path)
         driver = webdriver.Chrome(executable_path=self.chrome_driver_path,chrome_options=options)
         driver.set_window_size(1000,30000)
         wait = WebDriverWait(driver, 100)
