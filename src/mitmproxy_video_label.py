@@ -55,7 +55,7 @@ class label_core:
             if str(request.url).__contains__('ts') and str(request.url).__contains__('start') and str(request.url).__contains__('end') and str(response.headers).__contains__('Content-Length'):#tencent
                 video_flag=1
         elif self.video_server=='youtube':
-            if str(request.url).__contains__('videoplayback') and str(request.url).__contains__('range=') and str(response.headers).__contains__('Content-Type: video/') and str(response.headers).__contains__('Content-Length'):
+            if str(request.url).__contains__('videoplayback') and str(request.url).__contains__('range=') and str(response.headers).__contains__('Content-Type') and str(response.headers).__contains__('Content-Length'):
                 video_flag=1
         
         if video_flag==1:
