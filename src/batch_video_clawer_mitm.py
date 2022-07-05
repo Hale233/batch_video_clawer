@@ -52,10 +52,16 @@ class batch_clawer_mitm():
         #受局域网代理不会自动开启关闭影响，每次浏览时都应保证mitmproxy已运行
         mitmCall=[self.mitmproxy_path]
         mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
-        self.driver.get(main_url)
+        while True:
+            try:
+                time.sleep(3)
+                self.driver.get(main_url)
+                break
+            except:
+                continue
         time.sleep(5)
         #driver.execute_script('window.scrollTo(0,document.body.scrollHeight)')
-        for i in range(0,20):
+        for i in range(0,2):
             self.driver.execute_script('window.scrollBy(0,1000)')
             time.sleep(1)
         html=self.driver.page_source.encode("utf-8", "ignore")
@@ -112,19 +118,28 @@ class batch_clawer_mitm():
             if self.video_server=='bilibili':
                 video_url="https:"+video_url#bilibili
                 #video_url="https://www.bilibili.com"+video_url#bilibili
-                try:
-                    self.driver.get(video_url)
-                    time.sleep(5)
-                    self.driver.find_element_by_class_name("player").click() #点击开始播放
-                    html=self.driver.page_source.encode("utf-8", "ignore")
-                    parseHtml = etree.HTML(html)
-                    video_duration = parseHtml.xpath('//span[@class="bilibili-player-video-time-total"]/text()')
-                except:
-                    continue
+                while True:
+                    try:
+                        time.sleep(3)
+                        self.driver.get(video_url)
+                        break
+                    except:
+                        continue
+                time.sleep(5)
+                self.driver.find_element_by_class_name("player").click() #点击开始播放
+                html=self.driver.page_source.encode("utf-8", "ignore")
+                parseHtml = etree.HTML(html)
+                video_duration = parseHtml.xpath('//span[@class="bilibili-player-video-time-total"]/text()')
 
             elif self.video_server=='tencent':
                 video_url=video_url
-                self.driver.get(video_url)
+                while True:
+                    try:
+                        time.sleep(3)
+                        self.driver.get(video_url)
+                        break
+                    except:
+                        continue
                 time.sleep(5)
                 html=self.driver.page_source.encode("utf-8", "ignore")
                 parseHtml = etree.HTML(html)
@@ -133,8 +148,18 @@ class batch_clawer_mitm():
                 
             elif self.video_server=='youtube':
                 video_url="https://www.youtube.com/"+video_url
-                self.driver.get(video_url)
+                while True:
+                    try:
+                        time.sleep(3)
+                        self.driver.get(video_url)
+                        break
+                    except:
+                        continue
                 time.sleep(5)
+                try:
+                    self.driver.find_element_by_class_name("ytp-play-button").click()
+                except:
+                    continue
                 html=self.driver.page_source.encode("utf-8", "ignore")
                 parseHtml = etree.HTML(html)
                 video_duration = parseHtml.xpath('//span[@class="ytp-time-duration"]/text()')#获取视频时长
@@ -220,7 +245,7 @@ if __name__ == '__main__':
     #clawer.get_url("NBA","https://v.qq.com/channel/nba?listpage=1&channel=nba&sort=1")
 
     clawer.get_url("liuxing","https://www.youtube.com/feed/trending?bp=6gQJRkVleHBsb3Jl")
-    clawer.get_url("shishang","https://www.youtube.com/channel/UCrpQ4p1Ql_hG8rKXIKM1MOQ")
+    #clawer.get_url("shishang","https://www.youtube.com/channel/UCrpQ4p1Ql_hG8rKXIKM1MOQ")
     #clawer.get_url("xuexi","https://www.youtube.com/channel/UCtFRv9O2AHqOZjjynzrv-xg")
     #clawer.get_url("tiyu","https://www.youtube.com/channel/UCEgdi0XIXXZ-qJOFPf4JSKw")
     #clawer.get_url("xinwen","https://www.youtube.com/channel/UCEl0qh9X3kuL1RdFHng497Q")
