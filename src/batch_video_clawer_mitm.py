@@ -61,7 +61,7 @@ class batch_clawer_mitm():
                 continue
         time.sleep(5)
         #driver.execute_script('window.scrollTo(0,document.body.scrollHeight)')
-        for i in range(0,2):
+        for i in range(0,20):
             self.driver.execute_script('window.scrollBy(0,1000)')
             time.sleep(1)
         html=self.driver.page_source.encode("utf-8", "ignore")
@@ -113,75 +113,79 @@ class batch_clawer_mitm():
         mitmCall=[self.mitmproxy_path,"-s",self.mitm_py]
         mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
 
-        for video_url in self.video_url:
-            wait = WebDriverWait(self.driver, 100)
-            if self.video_server=='bilibili':
-                video_url="https:"+video_url#bilibili
-                #video_url="https://www.bilibili.com"+video_url#bilibili
-                while True:
-                    try:
-                        time.sleep(3)
-                        self.driver.get(video_url)
-                        break
-                    except:
-                        continue
-                time.sleep(5)
-                self.driver.find_element_by_class_name("player").click() #点击开始播放
-                html=self.driver.page_source.encode("utf-8", "ignore")
-                parseHtml = etree.HTML(html)
-                video_duration = parseHtml.xpath('//span[@class="bilibili-player-video-time-total"]/text()')
+        try:
+            for video_url in self.video_url:
+                wait = WebDriverWait(self.driver, 100)
+                if self.video_server=='bilibili':
+                    video_url="https:"+video_url#bilibili
+                    #video_url="https://www.bilibili.com"+video_url#bilibili
+                    while True:
+                        try:
+                            time.sleep(3)
+                            self.driver.get(video_url)
+                            break
+                        except:
+                            continue
+                    time.sleep(5)
+                    self.driver.find_element_by_class_name("player").click() #点击开始播放
+                    html=self.driver.page_source.encode("utf-8", "ignore")
+                    parseHtml = etree.HTML(html)
+                    video_duration = parseHtml.xpath('//span[@class="bilibili-player-video-time-total"]/text()')
 
-            elif self.video_server=='tencent':
-                video_url=video_url
-                while True:
+                elif self.video_server=='tencent':
+                    video_url=video_url
+                    while True:
+                        try:
+                            time.sleep(3)
+                            self.driver.get(video_url)
+                            break
+                        except:
+                            continue
+                    time.sleep(5)
+                    html=self.driver.page_source.encode("utf-8", "ignore")
+                    parseHtml = etree.HTML(html)
+                    video_duration = parseHtml.xpath('//txpdiv[@class="txp_time_duration"]/text()')
+                    #video_duration=driver.find_element_by_xpath('//span[@class="bilibili-player-video-time-total"]').get_attribute() #关闭弹幕
+                    
+                elif self.video_server=='youtube':
+                    video_url="https://www.youtube.com/"+video_url
+                    while True:
+                        try:
+                            time.sleep(3)
+                            self.driver.get(video_url)
+                            break
+                        except:
+                            continue
+                    time.sleep(5)
                     try:
-                        time.sleep(3)
-                        self.driver.get(video_url)
-                        break
+                        #self.driver.find_element(by=By.CLASS_NAME, value="ytp-play-button").click() #
+                        self.driver.find_element_by_class_name("ytp-play-button").click()
                     except:
-                        continue
-                time.sleep(5)
-                html=self.driver.page_source.encode("utf-8", "ignore")
-                parseHtml = etree.HTML(html)
-                video_duration = parseHtml.xpath('//txpdiv[@class="txp_time_duration"]/text()')
-                #video_duration=driver.find_element_by_xpath('//span[@class="bilibili-player-video-time-total"]').get_attribute() #关闭弹幕
-                
-            elif self.video_server=='youtube':
-                video_url="https://www.youtube.com/"+video_url
-                while True:
-                    try:
-                        time.sleep(3)
-                        self.driver.get(video_url)
-                        break
-                    except:
-                        continue
-                time.sleep(5)
-                try:
-                    self.driver.find_element_by_class_name("ytp-play-button").click()
-                except:
-                    continue
-                html=self.driver.page_source.encode("utf-8", "ignore")
-                parseHtml = etree.HTML(html)
-                video_duration = parseHtml.xpath('//span[@class="ytp-time-duration"]/text()')#获取视频时长
-                duration_of_the_video=self.time_duration
+                        print("player error")
+                    html=self.driver.page_source.encode("utf-8", "ignore")
+                    parseHtml = etree.HTML(html)
+                    video_duration = parseHtml.xpath('//span[@class="ytp-time-duration"]/text()')#获取视频时长
+                    duration_of_the_video=self.time_duration
 
-            print (number)
-            print(video_url)
-            url_file.write(video_url+"\n")
-            #获取视频时长
-            if len(video_duration)>0:
-                time_data=str(video_duration[0]).split(':')
-                if len(time_data)==2:
-                    video_duration_s=int(time_data[0])*60+int(time_data[1])
+                print (number)
+                print(video_url)
+                url_file.write(video_url+"\n")
+                #获取视频时长
+                if len(video_duration)>0:
+                    time_data=str(video_duration[0]).split(':')
+                    if len(time_data)==2:
+                        video_duration_s=int(time_data[0])*60+int(time_data[1])
+                    else:
+                        video_duration_s=int(time_data[0])*3600+int(time_data[1])*60+int(time_data[2])
                 else:
-                    video_duration_s=int(time_data[0])*3600+int(time_data[1])*60+int(time_data[2])
-            else:
-                video_duration_s=-1            
-            duration_of_the_video=self.time_duration
-            if (video_duration_s<self.time_duration and video_duration_s>0):
-                duration_of_the_video=video_duration_s-10
+                    video_duration_s=-1            
+                duration_of_the_video=self.time_duration
+                if (video_duration_s<self.time_duration and video_duration_s>0):
+                    duration_of_the_video=video_duration_s-10
 
-            time.sleep(duration_of_the_video)
+                time.sleep(duration_of_the_video)
+        except:
+            print("URL error")
         
         mitmProc.kill()
         time.sleep(30)
