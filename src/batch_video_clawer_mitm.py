@@ -26,6 +26,7 @@ class batch_clawer_mitm():
         self.batch_size=int(conf.get("clawer","batch_size"))     #每一个pcap文件中包含的视频个数,称为一个batch
         self.batch_count=int(conf.get("clawer","batch_count"))      #总共播放多少个batch
         self.video_server=conf.get("clawer","video_server")#tencent bilibili youtube
+        self.player_click=int(conf.get("clawer","player_click"))
         self.ping_record_flag=int(conf.get("ping","ping_record_flag"))#是否采集时延信息
 
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.193 Safari/537.36'}
@@ -67,13 +68,18 @@ class batch_clawer_mitm():
         html=self.driver.page_source.encode("utf-8", "ignore")
         parseHtml = etree.HTML(html)
 
+        video_urls=[]
         if self.video_server=='bilibili':
             #video_urls =driver.find_element_by_xpath('//div[@class="spread-module"]/a').get_attribute("href")
             video_urls = parseHtml.xpath('//div[@class="spread-module"]/a/@href')#bilibili
         elif self.video_server=='tencent':
             video_urls = parseHtml.xpath('//div[@class="list_item"]/a/@href')#tencent
         elif self.video_server=='youtube':
-            video_urls = parseHtml.xpath('//a[@id="thumbnail"]/@href')#youtube
+            raw_video_urls = parseHtml.xpath('//a[@id="thumbnail"]/@href')#youtube
+            #跳过短视频
+            for url in raw_video_urls:
+                if str(url).__contains__('watch'):
+                    video_urls.append(url)
 
         mitmProc.kill()
 
@@ -87,8 +93,8 @@ class batch_clawer_mitm():
 
     #批量播放视频URL并记录pcap、ping、指纹信息
     def batch_down(self,number,video_name):
-        if not str(self.video_url).__contains__('watch'):
-            return
+        #if not str(self.video_url).__contains__('watch'):
+        #    return
         t_time = time.strftime("%H_%M_%S")
         if not os.path.exists(self.root_path):
             os.makedirs(self.root_path)
@@ -160,8 +166,9 @@ class batch_clawer_mitm():
                             continue
                     time.sleep(5)
                     try:
-                        #self.driver.find_element(by=By.CLASS_NAME, value="ytp-play-button").click() #
-                        self.driver.find_element_by_class_name("ytp-play-button").click()
+                        #self.driver.find_element(by=By.CLASS_NAME, value="ytp-play-button").click()
+                        if self.player_click==1:
+                            self.driver.find_element_by_class_name("ytp-play-button").click()
                     except:
                         print("player error")
                     html=self.driver.page_source.encode("utf-8", "ignore")
