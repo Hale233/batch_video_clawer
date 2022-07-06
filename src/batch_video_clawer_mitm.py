@@ -61,7 +61,7 @@ class batch_clawer_mitm():
                 continue
         time.sleep(5)
         #driver.execute_script('window.scrollTo(0,document.body.scrollHeight)')
-        for i in range(0,20):
+        for i in range(0,2):
             self.driver.execute_script('window.scrollBy(0,1000)')
             time.sleep(1)
         html=self.driver.page_source.encode("utf-8", "ignore")
@@ -87,6 +87,8 @@ class batch_clawer_mitm():
 
     #批量播放视频URL并记录pcap、ping、指纹信息
     def batch_down(self,number,video_name):
+        if not str(self.video_url).__contains__('watch'):
+            return
         t_time = time.strftime("%H_%M_%S")
         if not os.path.exists(self.root_path):
             os.makedirs(self.root_path)
