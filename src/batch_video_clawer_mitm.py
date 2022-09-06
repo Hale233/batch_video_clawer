@@ -236,7 +236,7 @@ if __name__ == '__main__':
     clawer=batch_clawer_mitm(conf_path)
 
     #clawer.get_url("donghua","https://www.bilibili.com/v/douga/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.1")
-    #clawer.get_url("yinyue","https://www.bilibili.com/v/music/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.9")
+    clawer.get_url("yinyue","https://www.bilibili.com/v/music/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.9")
     #clawer.get_url("zhishi","https://www.bilibili.com/v/knowledge/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.51")
     #clawer.get_url("shishang","https://www.bilibili.com/v/fashion/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.73")
     #clawer.get_url("yule","https://www.bilibili.com/v/ent/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.83")
@@ -257,10 +257,11 @@ if __name__ == '__main__':
     #clawer.get_url("yinyue","https://v.qq.com/channel/music?listpage=1&channel=music&sort=4&_all=1")
     #clawer.get_url("NBA","https://v.qq.com/channel/nba?listpage=1&channel=nba&sort=1")
 
-    clawer.get_url("liuxing","https://www.youtube.com/feed/trending?bp=6gQJRkVleHBsb3Jl")
+    #clawer.get_url("liuxing","https://www.youtube.com/feed/trending?bp=6gQJRkVleHBsb3Jl")
     #clawer.get_url("shishang","https://www.youtube.com/channel/UCrpQ4p1Ql_hG8rKXIKM1MOQ")
     #clawer.get_url("xuexi","https://www.youtube.com/channel/UCtFRv9O2AHqOZjjynzrv-xg")
     #clawer.get_url("tiyu","https://www.youtube.com/channel/UCEgdi0XIXXZ-qJOFPf4JSKw")
+    #clawer.get_url("game","https://www.youtube.com/gaming/trending")
     #clawer.get_url("xinwen","https://www.youtube.com/channel/UCEl0qh9X3kuL1RdFHng497Q")
     #clawer.get_url("remen","https://www.youtube.com/feed/explore")
     #clawer.get_url("lvyou","https://www.youtube.com/results?search_query=%E6%97%85%E6%B8%B8")
