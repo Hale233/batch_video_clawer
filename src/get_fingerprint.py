@@ -26,10 +26,20 @@ class Finger():
             return False
 
     def from_root_path_get_finger(self,root_path):
-        Filelist,_=self.get_filelist(root_path+"\\mitm")
+        Filelist,_=self.get_filelist(root_path+"/mitm")
         for path in Filelist:
             #print(path)
             self.finger_extract(path)
+    
+    #从记录文件路径的文件中依次读取文件处理指纹
+    def from_path_file_get_finger(self,path_file):
+        path_file=open(path_file,mode='r',encoding='utf-8')
+        path_datas=path_file.read().split('\n')
+        for root_path in path_datas:
+            Filelist,_=self.get_filelist(root_path)
+            for path in Filelist:
+                #print(path)
+                self.finger_extract(path)
 
     def finger_extract(self,path):
         #key为itag，value为list，list中每一个元素为[range_beg,range_end,len,4tuple]
@@ -62,7 +72,7 @@ class Finger():
                     base_data=[video_range_beg,video_range_end,int(lines[0]),file_names[i],"audio"]
                 else:
                     #print(response_head)
-                    print ("\n error!!!!!!!!!!!!!!!!!\n")
+                    #print ("\n error!!!!!!!!!!!!!!!!!\n")
                     continue
 
                 if itag not in video_itag_dict:
@@ -73,7 +83,8 @@ class Finger():
         finger_valid_dict=self.finger_valid(video_itag_dict)
         finger_dick=self.get_finger(video_itag_dict)
         self.finger_valid_dict_list[path]=finger_valid_dict
-        self.record_finger(path,video_itag_dict)
+        #self.record_finger(path,video_itag_dict)
+        self.analysis_record()
     
     #记录指纹值
     def record_finger(self,path,video_itag_dict):
@@ -204,6 +215,7 @@ class Finger():
         return finger_valid_dict
             
 if __name__ == '__main__':
-    finger=Finger("E:\\code_project\\video_title_classification\\batch_video_clawer\\analysis2.csv","E:\\code_project\\video_title_classification\\batch_video_clawer\\finger.csv")
-    finger.from_root_path_get_finger("E:\\pcap_data\\xxg146\\liuxing")
+    finger=Finger("/home/local/data1/xuminchao/batch_video_clawer/data/mitm/analysis2.csv","/home/local/data1/xuminchao/batch_video_clawer/data/mitm/finger.csv")
+    #finger.from_root_path_get_finger("/home/local/data1/pcap/NAS_40_99/collect_video_fingerprint/chengsiyuan/game")
+    finger.from_path_file_get_finger("/home/local/data1/xuminchao/batch_video_clawer/data/mitm_file_path")
     
