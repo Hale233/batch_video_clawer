@@ -4,11 +4,12 @@ import numpy as np
 
 #记录流信息，分别是：指纹序列、五元组序列、视频URL、mitm文件路径(用于验证)
 class Video_flow():
-    def __init__(self,finger_list,tuple_list,video_url='',mitm_path='') -> None:
+    def __init__(self,finger_list,tuple_list,video_url='',mitm_path='',state_transition_matrix='') -> None:
         self.finger_list=finger_list
         self.tuple_list=tuple_list
         self.video_url=video_url
         self.mitm_path=mitm_path
+        self.state_transition_matrix=state_transition_matrix
 
 #记录原始流、ground truth流、预测流之间的关系
 class O_g_p_relation():
