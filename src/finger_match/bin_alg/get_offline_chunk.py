@@ -75,7 +75,7 @@ class Get_offchunk():
     
     def recrod_chunk(self,chunk_dict):
         record_file=open(self.record_path,mode='a+',encoding='utf-8')
-        for tuple,chunk_list in chunk_dict:
+        for tuple,chunk_list in chunk_dict.items():
             record_file.write(str(tuple).replace(",",".").replace("-",">")+',')
             for chunk in chunk_list:
                 record_file.write(str(chunk.chunk_len)+'/')
