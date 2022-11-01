@@ -83,7 +83,7 @@ class Get_offchunk():
     
     def work_stream(self,path):
         chunk_dict=self.chunk_extract(path)
-        self.record_path(chunk_dict)
+        self.recrod_chunk(chunk_dict)
 
 if __name__ == '__main__':
     get_offchunk=Get_offchunk("/home/local/data1/xuminchao/batch_video_clawer/data/result/analysis2.csv")
