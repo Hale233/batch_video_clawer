@@ -1,3 +1,4 @@
+#将指纹库与在线指纹进行清理（去除音频块），标注，并构建为类，用于后续的匹配算法
 from re import X
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,7 +29,7 @@ class data_Process():
         self.o_g_p_relation_list=[]
         self.get_offline_finger()
         self.get_online_finger()
-        self.small_chunk_clean(self.online_chunk_list,audio_thd+10000)
+        self.small_chunk_clean(self.online_chunk_list,audio_thd+15000)
         self.small_chunk_clean(self.offline_chunk_list,audio_thd)
         self.stream_label_match()
 

@@ -1,4 +1,5 @@
 /ping_path
-/src/__pycache__
+/src/video_finger_clawer/__pycache__
+/src/finger_match/__pycache__
 /data/mitm
 /data/result
