@@ -126,7 +126,7 @@ class Match_alg():
 
     #高阶马尔可夫
     #bins_count:桶个数、orders:马尔可夫的阶数、win_size:取在线指纹的前若干个块进行匹配
-    def markov_hight_order(self,bins_count,orders,win_size):
+    def markov_hight_order(self,bins_count,orders,win_size,bias):
         orders +=1
         #计算离线指纹的order阶概率转移矩阵
         index_i=-1
@@ -139,7 +139,7 @@ class Match_alg():
             index_i +=1
             state_transition_dict={}
             for chunk in offline_chunk.finger_list:
-                #等分分桶
+                #离线 等分分桶
                 #获得桶的编号
                 if chunk>=self.video_chunk_size_max:
                     bin_index_cur=bins_count-1
@@ -178,14 +178,26 @@ class Match_alg():
                 online_short_count +=1
                 continue
             #构建在线的转移关系字典
+            #在线偏置等分分桶
             on_chunk_count=0
             for on_chunk in online_chunk.finger_list:
-                if on_chunk>=self.video_chunk_size_max:
+                #动态偏置
+                chunk_bias=(on_chunk-1119)/1.00135177
+                if chunk_bias>=self.video_chunk_size_max:
                     bin_index_cur=bins_count-1
-                elif on_chunk<=self.video_chunk_size_min:
+                elif chunk_bias<=self.video_chunk_size_min:
                     bin_index_cur=0
                 else:
-                    bin_index_cur=int((on_chunk-self.video_chunk_size_min)/bin_size)
+                    bin_index_cur=int((chunk_bias-self.video_chunk_size_min)/bin_size)
+                #静态偏置
+                '''
+                if on_chunk-bias>=self.video_chunk_size_max:
+                    bin_index_cur=bins_count-1
+                elif on_chunk-bias<=self.video_chunk_size_min:
+                    bin_index_cur=0
+                else:
+                    bin_index_cur=int((on_chunk-bias-self.video_chunk_size_min)/bin_size)
+                '''
                 
                 #记录转移序列
                 online_bin_relation_que.append(bin_index_cur)
@@ -248,24 +260,29 @@ class Match_alg():
             return all_count,true_count,true_count/all_count
 
 if __name__ == '__main__':
-    match_alg=Match_alg('/home/xuminchao/batch_video_clawer/data/result/online_encrypted_finger.csv','/home/xuminchao/batch_video_clawer/data/result/finger_store.csv')
-    match_alg.slide_wind(10)
+    #match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store.csv')
+    
+    #match_alg.slide_wind(10)
     #all_count,true_count,acc=match_alg.pred_performance()
     #print('{},{},{}'.format(all_count,true_count,acc))
-    #error_count,online_short_count=match_alg.markov_hight_order(80,3,1000)
+
+    #error_count,online_short_count=match_alg.markov_hight_order(80,4,1000,3000)
     #all_count,true_count,acc=match_alg.pred_performance()
-    #print('{},{},{},{},{},{},{},{}'.format(80,3,1000,error_count,online_short_count,all_count,true_count,acc))
+    #print('{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc))
     
-    '''
+    
     bin_count=[10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000]
-    order_list=[1,2,3,4,5,6,7,8,9,10]
-    win_size=[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-    for i in bin_count:
-        for j in order_list:
+    for i in range(9000,10000,100):
+        for j in range(1,11,1):
             #for k in win_size:
-            match_alg=Match_alg('/home/xuminchao/batch_video_clawer/data/result/online_encrypted_finger.csv','/home/xuminchao/batch_video_clawer/data/result/finger_store.csv')
+            match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store.csv')
             #match_alg.slide_wind(10)
-            error_count,online_short_count=match_alg.markov_hight_order(i,j,1000)
+            error_count,online_short_count=match_alg.markov_hight_order(i,j,1000,3000)
             all_count,true_count,acc=match_alg.pred_performance()
-            print('{},{},{},{},{},{},{},{}'.format(i,j,1000,error_count,online_short_count,all_count,true_count,acc))
+            print('{},{},{},{},{},{},{},{},{},{}'.format(i,j,1000,3000,error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
+    '''
+    match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store.csv')
+    error_count,online_short_count=match_alg.markov_hight_order(250,2,1000,3000)
+    all_count,true_count,acc=match_alg.pred_performance()
+    print('{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc))
     '''
