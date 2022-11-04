@@ -4,3 +4,5 @@
 /data/mitm
 /data/result
 /src/finger_match/__pycache__
+*__pycache__
+*.vscode

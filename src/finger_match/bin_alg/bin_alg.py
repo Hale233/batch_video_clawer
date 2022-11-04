@@ -13,7 +13,7 @@ class Bin_alg():
         #self.on_off_chunk_record()
         #self.on_off_chunk_diffvall_record()
         
-        self.res_avg_bin_analysis()
+        #self.res_avg_bin_analysis()
 
         #self.chunksize_res_relation_analysis()
         #on_off_bin_list=self.dynamic_res_average_bins_div(100)
@@ -78,7 +78,8 @@ class Bin_alg():
             if flag==0:
                 match_count +=1
                 for i in range(0,on_chunk_len):
-                    self.on_off_twain_list.append([on_chunk_list[i],off_chunk_list[i]])
+                    #最后一个元素为5元组信息
+                    self.on_off_twain_list.append([on_chunk_list[i],off_chunk_list[i],tuples])
         
         print(all_count,all_count-no_match_count,match_count)
     
@@ -99,14 +100,27 @@ class Bin_alg():
     #评估分桶算法的性能            
     def bin_alg_eval(self,on_off_bin_list):
         bin_count={}
+        error_tuples_dict={}
         match_success_count=0
         for datas in on_off_bin_list:
             bin_count[datas[0]]=1
             if datas[0]==datas[1]:
                 match_success_count +=1
+            else:
+                error_tuples_dict[datas[2]]=1
+                #print(datas[0]-datas[1],datas[2])
+        print (len(on_off_bin_list),len(on_off_bin_list)-match_success_count,len(error_tuples_dict))
         #print('all count={},match_success_count={},bin_count={}'.format(len(on_off_bin_list),match_success_count,len(bin_count)))
         return match_success_count
     
+    #获得错误分桶的块所在五元组信息，并记录到字典中
+    def get_error_tuple_dict(self,on_off_bin_list):
+        error_tuples_dict={}
+        for datas in on_off_bin_list:
+            if datas[0]!=datas[1]:
+                error_tuples_dict[datas[2]]=1
+        return error_tuples_dict
+
     #静态偏置等分分桶
     def static_res_average_bins_div(self,bins_count,bias):
         bin_size=(self.video_chunk_size_max-self.video_chunk_size_min)/bins_count
@@ -154,8 +168,8 @@ class Bin_alg():
                 bin_index_off=0
             else:
                 bin_index_off=int((chunk[1]-self.video_chunk_size_min)/bin_size)
-            
-            on_off_bin_list.append([bin_index_on,bin_index_off])
+            #最后一个元素为5元组信息
+            on_off_bin_list.append([bin_index_on,bin_index_off,chunk[2]])
         return on_off_bin_list
 
     #不同桶大小以及偏置值下统计桶匹配成功的个数
@@ -198,4 +212,6 @@ class Bin_alg():
 
 if __name__ == '__main__':
     bin_alg=Bin_alg("/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/offline_chunk_list.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_analysis.csv")
+    on_off_bin_list=bin_alg.dynamic_res_average_bins_div(820)
+    match_success_count=bin_alg.bin_alg_eval(on_off_bin_list)
     
