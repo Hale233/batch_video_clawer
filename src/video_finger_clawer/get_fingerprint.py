@@ -222,7 +222,7 @@ class Finger():
                 for j in range(i,len(video_itag_dict[itag])):
                     if video_itag_dict[itag][i].range_beg>video_itag_dict[itag][j].range_beg:
                         video_itag_dict[itag][i],video_itag_dict[itag][j]=video_itag_dict[itag][j],video_itag_dict[itag][i]
-            #去重,根据五元组出现的次数，保留出现次数多的重复块
+            #去重,根据五元组出现的次数，保留出现次数多的重复块（前提是能保证连续）
             for i in range(0,len(video_itag_dict[itag])-1):
                 if video_itag_dict[itag][i].range_beg==video_itag_dict[itag][i+1].range_beg:
                     if tuple_dist[video_itag_dict[itag][i].stream_tuple]>tuple_dist[video_itag_dict[itag][i+1].stream_tuple]:

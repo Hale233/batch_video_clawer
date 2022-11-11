@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 class Bin_alg():
-    def __init__(self,online_chunk_path,offline_chunk_path,record_path) -> None:
+    def __init__(self,online_chunk_path,offline_chunk_path) -> None:
         self.online_chunk_dict={}
         self.offline_chunk_dict={}
         self.on_off_twain_list=[]
-        self.record_path=record_path
         self.video_chunk_size_max=2500000.0
         self.video_chunk_size_min=600000.0
         self.online_chunk_dict=self.get_dict_data(online_chunk_path)
@@ -85,14 +84,15 @@ class Bin_alg():
     
     #记录在线与离线块的差值
     def on_off_chunk_diffvall_record(self):
-        record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_diffval_analysis.csv"
+        record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_diffval_analysis_seq.csv"
         record_file=open(record_path,mode='w',encoding='utf-8')
         for datas in self.on_off_twain_list:
             record_file.write(str(datas[0]-datas[1])+'\n')
 
     #记录在线与离线块的对应关系
     def on_off_chunk_record(self):
-        record_file=open(self.record_path,mode='w',encoding='utf-8')
+        record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_analysis_seq.csv"
+        record_file=open(record_path,mode='w',encoding='utf-8')
         for datas in self.on_off_twain_list:
             if datas[1]>600000:
                 record_file.write(str(datas[0])+','+str(datas[1])+'\n')
@@ -176,7 +176,7 @@ class Bin_alg():
     def res_avg_bin_analysis(self):
         record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/dynamic_res_avg_bin_analysis.csv"
         record_file=open(record_path,mode='w',encoding='utf-8')
-        for i in range(1000,100000,100):
+        for i in range(1000,100000,1000):
             print(i)
             on_off_bin_list=self.dynamic_res_average_bins_div(i)
             match_success_count=self.bin_alg_eval(on_off_bin_list)
@@ -211,7 +211,16 @@ class Bin_alg():
         #bias=0.00135177*offline_chunk+1119
 
 if __name__ == '__main__':
-    bin_alg=Bin_alg("/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/offline_chunk_list.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_analysis.csv")
-    on_off_bin_list=bin_alg.dynamic_res_average_bins_div(820)
-    match_success_count=bin_alg.bin_alg_eval(on_off_bin_list)
+    bin_alg=Bin_alg("/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger_seq.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/offline_chunk_list.csv")
+    #bin_alg.chunksize_res_relation_analysis()
+
+    #on_off_bin_list=bin_alg.dynamic_res_average_bins_div(820)
+    #match_success_count=bin_alg.bin_alg_eval(on_off_bin_list)
+
+    bin_alg.res_avg_bin_analysis()
+
+    #bin_alg.on_off_chunk_diffvall_record()
+
+    #bin_alg.on_off_chunk_record()
+
     
