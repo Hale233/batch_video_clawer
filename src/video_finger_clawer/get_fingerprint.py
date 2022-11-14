@@ -95,10 +95,9 @@ class Finger():
                 video_range_end=int(video_range.split("-")[1])
                 if response_head.find("'Content-Type', b'video")!=-1:
                     video_itag_val=Video_itag_val(video_range_beg,video_range_end,int(lines[0]),file_names[i],"video")
-                    #base_data=[video_range_beg,video_range_end,int(lines[0]),file_names[i],"video"]
                 elif response_head.find("'Content-Type', b'audio")!=-1:
-                    video_itag_val=Video_itag_val(video_range_beg,video_range_end,int(lines[0]),file_names[i],"audio")
-                    #base_data=[video_range_beg,video_range_end,int(lines[0]),file_names[i],"audio"]
+                    #video_itag_val=Video_itag_val(video_range_beg,video_range_end,int(lines[0]),file_names[i],"audio")
+                    continue
                 else:
                     #print(response_head)
                     #print ("\n error!!!!!!!!!!!!!!!!!\n")
@@ -222,13 +221,37 @@ class Finger():
                 for j in range(i,len(video_itag_dict[itag])):
                     if video_itag_dict[itag][i].range_beg>video_itag_dict[itag][j].range_beg:
                         video_itag_dict[itag][i],video_itag_dict[itag][j]=video_itag_dict[itag][j],video_itag_dict[itag][i]
-            #去重,根据五元组出现的次数，保留出现次数多的重复块
+            #去重,根据五元组出现的次数，保留出现次数多的重复块（前提是能保证连续）
             for i in range(0,len(video_itag_dict[itag])-1):
+                flag=0
+                j=i+1
+                while video_itag_dict[itag][i].range_beg==video_itag_dict[itag][j].range_beg:
+                    flag=1
+                    if j+1>=len(video_itag_dict[itag]):
+                        break
+                    j +=1
+
+                if flag==1:
+                    if video_itag_dict[itag][i].range_end+1==video_itag_dict[itag][j].range_beg:
+                        video_itag_dict[itag][i],video_itag_dict[itag][i+1]=video_itag_dict[itag][i+1],video_itag_dict[itag][i]
+                        continue
+                    else:
+                        continue
+                else:
+                    tmp_list.append(video_itag_dict[itag][i])
+                '''
                 if video_itag_dict[itag][i].range_beg==video_itag_dict[itag][i+1].range_beg:
+                    if i+2<len(video_itag_dict[itag]):
+                        if video_itag_dict[itag][i].range_end+1==video_itag_dict[itag][i+2].range_beg:
+                            video_itag_dict[itag][i],video_itag_dict[itag][i+1]=video_itag_dict[itag][i+1],video_itag_dict[itag][i]
+                            continue
+                        if video_itag_dict[itag][i+1].range_end+1==video_itag_dict[itag][i+2].range_beg:
+                            continue
                     if tuple_dist[video_itag_dict[itag][i].stream_tuple]>tuple_dist[video_itag_dict[itag][i+1].stream_tuple]:
                         video_itag_dict[itag][i],video_itag_dict[itag][i+1]=video_itag_dict[itag][i+1],video_itag_dict[itag][i]
                 else:
                     tmp_list.append(video_itag_dict[itag][i])
+                '''
             tmp_list.append(video_itag_dict[itag][len(video_itag_dict[itag])-1])
             video_itag_dict[itag]=tmp_list
         return video_itag_dict
@@ -287,7 +310,7 @@ class Finger():
         #self.record_finger(path,video_itag_dict)
 
 if __name__ == '__main__':
-    finger=Finger("/home/local/data1/xuminchao/batch_video_clawer/data/mitm/analysis2.csv","/home/local/data1/xuminchao/batch_video_clawer/data/mitm/finger.csv")
+    finger=Finger("/home/local/data1/xuminchao/batch_video_clawer/data/mitm/analysis_tmp.csv","/home/local/data1/xuminchao/batch_video_clawer/data/mitm/finger.csv")
     #finger.from_root_path_get_finger("/home/local/data1/pcap/NAS_40_99/collect_video_fingerprint/chengsiyuan/game")
     finger.from_path_file_get_finger("/home/local/data1/xuminchao/batch_video_clawer/data/mitm_file_path")
     finger.analysis_record()
