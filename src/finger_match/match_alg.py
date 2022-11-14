@@ -301,8 +301,8 @@ if __name__ == '__main__':
     #print('{},{},{}'.format(all_count,true_count,acc))
 
     error_count,online_short_count=match_alg.markov_hight_order(200,5,1000,3000)
-    #all_count,true_count,acc=match_alg.pred_performance()
-    #print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
+    all_count,true_count,acc=match_alg.pred_performance()
+    print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
     
     '''
     bin_count=[10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000]
