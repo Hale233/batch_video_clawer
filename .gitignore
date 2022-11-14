@@ -3,3 +3,9 @@
 /src/finger_match/__pycache__
 /data/mitm
 /data/result
+/src/finger_match/__pycache__
+*__pycache__
+*.vscode
+/chunk_size_analysis
+*~$*
+*DS_Store

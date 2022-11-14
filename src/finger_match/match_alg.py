@@ -5,6 +5,8 @@ from symbol import small_stmt
 from collections import deque
 from numpy import matrix
 from finger_preprocess import data_Process,Video_flow,O_g_p_relation
+from bin_alg import bin_alg
+import time
 
 class Match_alg():
     def __init__(self,online_file,offline_file) -> None:
@@ -126,20 +128,27 @@ class Match_alg():
 
     #高阶马尔可夫
     #bins_count:桶个数、orders:马尔可夫的阶数、win_size:取在线指纹的前若干个块进行匹配
-    def markov_hight_order(self,bins_count,orders,win_size):
+    def markov_hight_order(self,bins_count,orders,win_size,bias=3000,error_bins_tuples_dict={}):
         orders +=1
         #计算离线指纹的order阶概率转移矩阵
         index_i=-1
         bin_size=(self.video_chunk_size_max-self.video_chunk_size_min)/bins_count
         for offline_chunk in self.offline_chunk_list:
+            index_i +=1
+
+            #去除分桶错误的块所在的指纹,非必需
+            for tuples in offline_chunk.tuple_list:
+                if tuples in error_bins_tuples_dict:
+                    self.offline_chunk_list[index_i].state_transition_matrix={}
+                    break
+
             #当序列小于多少时不参与匹配
 
             #用一个队列记录n阶的桶关系
             bin_relation_que=deque()
-            index_i +=1
             state_transition_dict={}
             for chunk in offline_chunk.finger_list:
-                #等分分桶
+                #离线 等分分桶
                 #获得桶的编号
                 if chunk>=self.video_chunk_size_max:
                     bin_index_cur=bins_count-1
@@ -169,23 +178,44 @@ class Match_alg():
         online_short_count=0
         for o_g_p_relation in self.o_g_p_relation_list:
             index_j +=1
+            '''
+            #仅用一条流进行传输的指纹
+            if len(o_g_p_relation.ground_truth_stream.tuple_list)!=1:
+                continue
+            '''
+            #去除分桶错误的块所在的指纹,非必需
+            if o_g_p_relation.original_stream.tuple_list[0] in error_bins_tuples_dict:
+                continue
+
             online_chunk=o_g_p_relation.original_stream
-            bin_index_pre=-1
             online_bin_relation_que=deque()
             online_state_transition_dict={}
-            #长度太短而不参与匹配
+            #长度太短而不参与匹配,+n则保证至少有n次转移
             if len(online_chunk.finger_list)<orders + 1:
                 online_short_count +=1
                 continue
+            time_start=time.time()
             #构建在线的转移关系字典
+            #在线偏置等分分桶
             on_chunk_count=0
             for on_chunk in online_chunk.finger_list:
-                if on_chunk>=self.video_chunk_size_max:
+                #动态偏置
+                chunk_bias=(on_chunk-1119)/1.00135177
+                if chunk_bias>=self.video_chunk_size_max:
                     bin_index_cur=bins_count-1
-                elif on_chunk<=self.video_chunk_size_min:
+                elif chunk_bias<=self.video_chunk_size_min:
                     bin_index_cur=0
                 else:
-                    bin_index_cur=int((on_chunk-self.video_chunk_size_min)/bin_size)
+                    bin_index_cur=int((chunk_bias-self.video_chunk_size_min)/bin_size)
+                #静态偏置
+                '''
+                if on_chunk-bias>=self.video_chunk_size_max:
+                    bin_index_cur=bins_count-1
+                elif on_chunk-bias<=self.video_chunk_size_min:
+                    bin_index_cur=0
+                else:
+                    bin_index_cur=int((on_chunk-bias-self.video_chunk_size_min)/bin_size)
+                '''
                 
                 #记录转移序列
                 online_bin_relation_que.append(bin_index_cur)
@@ -224,6 +254,9 @@ class Match_alg():
                 if cur_prob>max_prob:
                     max_prob=cur_prob
                     target_chunk=offline_chunk
+
+            time_end=time.time()
+            #print(time_end-time_start)
             if target_chunk == None:
                 #print("error")
                 error_count +=1
@@ -241,31 +274,44 @@ class Match_alg():
             all_count +=1
             if o_g_p_relation.ground_truth_stream.video_url == o_g_p_relation.pred_stream.video_url:
                 true_count +=1
+            else :
+                _=1
         #print ('all count {}; true count {}; acc {}'.format(all_count,true_count,true_count/all_count))
         if all_count==0:
             return all_count,true_count,0
         else :
             return all_count,true_count,true_count/all_count
+    
+    #去除错误分桶所在的流后进行匹配性能评估
+    def pred_performance_deFalseStream():
+        bin_alg_class=bin_alg.Bin_alg("/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/offline_chunk_list.csv")
+        on_off_bin_list=bin_alg_class.dynamic_res_average_bins_div(90)
+        error_bins_tuples_dict=bin_alg_class.get_error_tuple_dict(on_off_bin_list)
+
+        match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger_seq.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store.csv')
+        error_count,online_short_count=match_alg.markov_hight_order(90,4,1000,3000,error_bins_tuples_dict)
+        all_count,true_count,acc=match_alg.pred_performance()
+        print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
 
 if __name__ == '__main__':
-    match_alg=Match_alg('/home/xuminchao/batch_video_clawer/data/result/online_encrypted_finger.csv','/home/xuminchao/batch_video_clawer/data/result/finger_store.csv')
-    match_alg.slide_wind(10)
+    match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger_seq.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store.csv')
+    
+    #match_alg.slide_wind(10)
     #all_count,true_count,acc=match_alg.pred_performance()
     #print('{},{},{}'.format(all_count,true_count,acc))
-    #error_count,online_short_count=match_alg.markov_hight_order(80,3,1000)
-    #all_count,true_count,acc=match_alg.pred_performance()
-    #print('{},{},{},{},{},{},{},{}'.format(80,3,1000,error_count,online_short_count,all_count,true_count,acc))
+
+    error_count,online_short_count=match_alg.markov_hight_order(200,5,1000,3000)
+    all_count,true_count,acc=match_alg.pred_performance()
+    print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
     
     '''
     bin_count=[10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000]
-    order_list=[1,2,3,4,5,6,7,8,9,10]
-    win_size=[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-    for i in bin_count:
-        for j in order_list:
+    for i in range(10000,100000,1000):
+        for j in range(1,11,1):
             #for k in win_size:
-            match_alg=Match_alg('/home/xuminchao/batch_video_clawer/data/result/online_encrypted_finger.csv','/home/xuminchao/batch_video_clawer/data/result/finger_store.csv')
+            match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger_seq.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store.csv')
             #match_alg.slide_wind(10)
-            error_count,online_short_count=match_alg.markov_hight_order(i,j,1000)
+            error_count,online_short_count=match_alg.markov_hight_order(i,j,1000,3000)
             all_count,true_count,acc=match_alg.pred_performance()
-            print('{},{},{},{},{},{},{},{}'.format(i,j,1000,error_count,online_short_count,all_count,true_count,acc))
+            print('{},{},{},{},{},{},{},{},{},{}'.format(i,j,1000,3000,error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
     '''
