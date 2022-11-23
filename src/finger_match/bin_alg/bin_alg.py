@@ -91,7 +91,7 @@ class Bin_alg():
 
     #记录在线与离线块的对应关系
     def on_off_chunk_record(self):
-        record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_analysis_seq.csv"
+        record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/on_off_analysis_seq_audio.csv"
         record_file=open(record_path,mode='w',encoding='utf-8')
         for datas in self.on_off_twain_list:
             if datas[1]>600000:
@@ -217,10 +217,10 @@ if __name__ == '__main__':
     #on_off_bin_list=bin_alg.dynamic_res_average_bins_div(820)
     #match_success_count=bin_alg.bin_alg_eval(on_off_bin_list)
 
-    bin_alg.res_avg_bin_analysis()
+    #bin_alg.res_avg_bin_analysis()
 
     #bin_alg.on_off_chunk_diffvall_record()
 
-    #bin_alg.on_off_chunk_record()
+    bin_alg.on_off_chunk_record()
 
     
