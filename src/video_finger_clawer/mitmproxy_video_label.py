@@ -7,7 +7,7 @@ import configparser
 
 class label_core:
     def __init__(self) -> None:
-        conf_path= "E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\vdieo_title_clawer.conf"
+        conf_path= "E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\video_title_clawer.conf"
         conf= configparser.ConfigParser()
         conf.read(conf_path,encoding='UTF-8')
         self.video_streams={}

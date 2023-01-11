@@ -21,7 +21,52 @@ class Match_alg():
         self.o_g_p_relation_list=finger_data.o_g_p_relation_list
     
     def P_dtw(self):
-        pass
+        # # 变换指纹库流
+        for i in range(len(self.offline_chunk_list)):
+            R = [0]
+            for j in range(1, len(self.offline_chunk_list[i].finger_list)):
+                r = (self.offline_chunk_list[i].finger_list[j] - self.offline_chunk_list[i].finger_list[j - 1]) / self.offline_chunk_list[i].finger_list[j - 1]
+                R.append(r)
+            if R != [0]:
+                self.offline_chunk_list[i].finger_list = R
+
+        # 变换待匹配流
+        for i in range(len(self.o_g_p_relation_list)):
+            R = [0]
+            for j in range(1, len(self.o_g_p_relation_list[i].original_stream.finger_list)):
+                pre=(self.o_g_p_relation_list[i].original_stream.finger_list[j - 1]-1119)/1.00135177
+                cur=(self.o_g_p_relation_list[i].original_stream.finger_list[j]-1119)/1.00135177
+                r = (cur - pre) / pre
+                R.append(r)
+            if R != [0]:
+                self.o_g_p_relation_list[i].original_stream.finger_list = R
+
+        time_start=time.time()
+        ind = -1
+        for sub_que in self.o_g_p_relation_list:
+            ind += 1
+            if len(sub_que.ground_truth_stream.tuple_list)!=1:
+                continue
+            n = len(sub_que.original_stream.finger_list)
+            if n > 0:
+                min_tem = []
+                min_d = float('inf')
+                for sub_tem in self.offline_chunk_list:
+                    m = len(sub_tem.finger_list)
+                    if m > 0:
+                        M = [[float('inf') for i in range(m)] for j in range(n)]
+                        M[0][0] = 0
+                        for i in range(1, n):
+                            for j in range(1, m):
+                                cost = abs(sub_tem.finger_list[j] - sub_que.original_stream.finger_list[i])
+                                M[i][j] = cost  + min(M[i - 1][j], M[i - 1][j - 1], M[i - 1][j - 2])
+                        if min_d > M[-1][-1] / n:
+                            min_d = M[-1][-1] / n
+                            min_tem = sub_tem
+                self.o_g_p_relation_list[ind].pred_stream = min_tem
+        time_end=time.time()
+        print (time_end-time_start)
+
 
     #滑动窗口匹配
     def slide_wind(self,wind_size):
@@ -33,8 +78,8 @@ class Match_alg():
             index +=1
             self.o_g_p_relation_list[index].pred_stream=None
             # 仅统计用一条流传输的视频
-            #if len(o_g_p_relation.ground_truth_stream.tuple_list)!=1:
-            #    continue
+            if len(o_g_p_relation.ground_truth_stream.tuple_list)!=1:
+                continue
             if len(o_g_p_relation.original_stream.finger_list)<wind_size:
                 small_count +=1
                 continue
@@ -49,11 +94,12 @@ class Match_alg():
                 #for i in range(0,(len(offline_chunk.finger_list)-len(online_chunk.finger_list)+1)):
                     cur_dis=0
                     for j in range(0,wind_size):
+                        online_chunk_size=(online_chunk.finger_list[j]-1119)/1.00135177
                         #在线一定是要大于离线指纹库的
-                        if online_chunk.finger_list[j]<offline_chunk.finger_list[j+i]:
-                            cur_dis=99999999999
-                            break
-                        cur_dis +=abs(online_chunk.finger_list[j]-offline_chunk.finger_list[j+i])
+                        #if online_chunk.finger_list[j]<offline_chunk.finger_list[j+i]:
+                        #    cur_dis=99999999999
+                        #    break
+                        cur_dis +=abs(online_chunk_size-offline_chunk.finger_list[j+i])
                     if cur_dis<min_dis:
                         min_dis=cur_dis
                         min_chunk=offline_chunk
@@ -67,7 +113,7 @@ class Match_alg():
             time_end=time.time()
             time_sum +=time_end-time_start
             time_count +=1
-        print (time_sum,time_count,time_sum/time_count)
+        #print (time_sum,time_count,time_sum/time_count)
         return small_count
     
     #一阶马尔可夫
@@ -140,6 +186,13 @@ class Match_alg():
                 continue
             self.o_g_p_relation_list[index_j].pred_stream=target_chunk
 
+    #网格搜索时每次用新的参数需要把上次预测的结果清空
+    def pred_clean(self):
+        index_j=-1
+        for o_g_p_relation in self.o_g_p_relation_list:
+            index_j +=1
+            self.o_g_p_relation_list[index_j].pred_stream=None
+
     #高阶马尔可夫
     #bins_count:桶个数、orders:马尔可夫的阶数、win_size:转移的次数、de_mix_stream_flag:匹配仅用一条流传输的指纹
     def markov_hight_order(self,bins_count,orders,win_size,de_mix_stream_flag=0,mutil_order_flag=0,bias=3000,error_bins_tuples_dict={}):
@@ -199,6 +252,8 @@ class Match_alg():
             if mutil_order_flag==1:
                 if self.o_g_p_relation_list[index_j].zero_prob==0:
                     continue
+            else:
+                self.o_g_p_relation_list[index_j].pred_stream=None
 
             #仅用一条流进行传输的指纹
             if de_mix_stream_flag==1:
@@ -326,20 +381,28 @@ class Match_alg():
 if __name__ == '__main__':
     offline_audio_thd=700000
     match_alg=Match_alg('./data/chunk_list/online_encrypted_finger_seq.csv','./data/chunk_list/finger_store_3.csv',offline_audio_thd)
+    match_alg.P_dtw()
+    all_count,true_count,acc=match_alg.pred_performance()
+    print('{},{},{}'.format(all_count,true_count,acc))
     '''
     for i in range(3,11):
+        match_alg=Match_alg('./data/chunk_list/online_encrypted_finger_seq.csv','./data/chunk_list/finger_store_3.csv',offline_audio_thd)
         online_short_count=match_alg.slide_wind(i)
         all_count,true_count,acc=match_alg.pred_performance()
         print('{},{},{},{}'.format(online_short_count,all_count,true_count,acc))
-    '''
-    for i in range(1,6):
-        error_count,online_short_count=match_alg.markov_hight_order(bins_count=5,orders=i,win_size=1000,de_mix_stream_flag=1)
-        all_count,true_count,acc=match_alg.pred_performance()
-        print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
-    #error_count,online_short_count=match_alg.markov_hight_order(bins_count=4000,orders=1,win_size=3,mutil_order_flag=1)
-    #all_count,true_count,acc=match_alg.pred_performance()
-    #print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
     
+    
+    for i in range(1,6,1):
+        for j in range(4000,7000,1000):
+            #match_alg.pred_clean()
+            match_alg=Match_alg('./data/chunk_list/online_encrypted_finger_seq.csv','./data/chunk_list/finger_store_3.csv',offline_audio_thd)
+            error_count,online_short_count=match_alg.markov_hight_order(bins_count=j,orders=i,win_size=1,de_mix_stream_flag=1)
+            all_count,true_count,acc=match_alg.pred_performance()
+            #print('{},{},{},{},{},{},{},{}'.format(i,j,error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
+            error_count,online_short_count=match_alg.markov_hight_order(bins_count=j,orders=1,win_size=3,mutil_order_flag=1,de_mix_stream_flag=1)
+            all_count,true_count,acc=match_alg.pred_performance()
+            print('{},{},{},{},{},{},{},{}'.format(i,j,error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
+    '''
     
     '''
     bin_count=[100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000]
@@ -347,7 +410,7 @@ if __name__ == '__main__':
         for j in range(1,11,1):
             for k in range(1,10,1):
                 #for k in win_size:
-                match_alg=Match_alg('/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger_seq.csv','/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/finger_store_3.csv',offline_audio_thd)
+                match_alg=Match_alg('./data/chunk_list/online_encrypted_finger_seq.csv','./data/chunk_list/finger_store_3.csv',offline_audio_thd)
                 #match_alg.slide_wind(10)
                 error_count,online_short_count=match_alg.markov_hight_order(bins_count=i,orders=j,win_size=k)
                 all_count,true_count,acc=match_alg.pred_performance()

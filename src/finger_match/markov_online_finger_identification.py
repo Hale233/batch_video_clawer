@@ -2,6 +2,7 @@ from collections import deque
 from numpy import matrix
 from finger_preprocess import data_Process,Video_flow,O_g_p_relation
 from bin_alg import bin_alg
+import math
 import time
 
 #在线模式马尔可夫
@@ -17,17 +18,22 @@ class Markov_alg():
         self.online_chunk_list=finger_data.online_chunk_list
         self.o_g_p_relation_list=finger_data.o_g_p_relation_list
         
-        self.state_transition_calculate(high_bins_count,high_orders)
+        self.high_glabal_state_transition_table=self.state_transition_calculate(high_bins_count,high_orders)
         self.high_state_transition_table=self.state_transition_table_generate(high_orders)
-        self.state_transition_calculate(low_bins_count,low_orders)
+        self.low_glabal_state_transition_table=self.state_transition_calculate(low_bins_count,low_orders)
         self.low_state_transition_table=self.state_transition_table_generate(low_orders)
         error_count,online_short_count=self.online_match(high_orders,high_bins_count,high_win_size,0)
+        #all_count,true_count,acc=self.pred_performance()
+        #print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))        
         error_count,online_short_count=self.online_match(low_orders,low_bins_count,low_win_size,1)
         all_count,true_count,acc=self.pred_performance()
-        print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
+        #print('{},{},{},{},{},{}'.format(error_count,online_short_count,all_count,true_count,acc,true_count/(error_count+all_count)))
+        print('{},{},{}'.format(high_orders+1,high_orders+high_win_size,acc))
 
     #记录指纹库的所有转移概率
     def state_transition_calculate(self,bins_count,orders):
+        global_tran_prob_table={}
+        word_count=0
         orders +=1
         #计算离线指纹的order阶概率转移矩阵
         index_i=-1
@@ -58,8 +64,27 @@ class Markov_alg():
                     state_transition_dict[relation_key]=1
                 else:
                     state_transition_dict[relation_key] +=1
+                
+                #全局概率
+                if relation_key not in global_tran_prob_table:
+                    global_tran_prob_table[relation_key]=1
+                else:
+                    global_tran_prob_table[relation_key] +=1
+                word_count +=1
+
                 bin_relation_que.popleft()
             self.offline_chunk_list[index_i].state_transition_matrix=state_transition_dict
+        
+        for transition,transition_prob in global_tran_prob_table.items():
+            '''
+            prob=(1-transition_prob*1000/word_count)
+            if prob<0:
+                prob=0.00001
+            '''
+            prob=math.log(word_count/(transition_prob+1))
+            global_tran_prob_table[transition]=prob
+        return global_tran_prob_table
+
     
     #生成指纹库的转移概率表
     def state_transition_table_generate(self,orders):
@@ -90,8 +115,12 @@ class Markov_alg():
         online_short_count=0
         if mutil_order_flag==0:
             state_transition_table=self.high_state_transition_table
+            #global
+            global_state_transition_table=self.high_glabal_state_transition_table
         else :
             state_transition_table=self.low_state_transition_table
+            #global
+            global_state_transition_table=self.low_glabal_state_transition_table
 
         for o_g_p_relation in self.o_g_p_relation_list:
             index_j +=1
@@ -99,6 +128,8 @@ class Markov_alg():
             if mutil_order_flag==1:
                 if self.o_g_p_relation_list[index_j].zero_prob==0:
                     continue
+            else:
+                self.o_g_p_relation_list[index_j].pred_stream=None
 
             online_chunk=o_g_p_relation.original_stream
             online_bin_relation_que=deque()
@@ -143,9 +174,13 @@ class Markov_alg():
                 if on_key in state_transition_table:
                     for val in state_transition_table[on_key]:
                         if val[0] in state_dict:
-                            state_dict[val[0]] +=on_val*val[1]
+                            #state_dict[val[0]] +=on_val*val[1]
+                            #state_dict[val[0]] +=on_val*val[1]*global_state_transition_table[on_key]
+                            state_dict[val[0]] +=on_val*val[1]+global_state_transition_table[on_key]*100
                         else :
-                            state_dict[val[0]]=on_val*val[1]
+                            #state_dict[val[0]]=on_val*val[1]
+                            #state_dict[val[0]]=on_val*val[1]*global_state_transition_table[on_key]
+                            state_dict[val[0]]=on_val*val[1]+global_state_transition_table[on_key]*100
 
             max_prob=0
             target_id=-1
@@ -162,7 +197,7 @@ class Markov_alg():
             time_sum +=time_end-time_start
             time_count +=1
 
-        print (time_sum,time_count,time_sum/time_count)
+        #print (time_sum,time_count,time_sum/time_count)
         return error_count,online_short_count
 
     #在线匹配过程中streamID与指纹库类的对应关系
@@ -197,6 +232,8 @@ if __name__ == '__main__':
     online_file='./data/chunk_list/online_encrypted_finger_seq.csv'
     offline_file='./data/chunk_list/finger_store_3.csv'
     offline_audio_thd=700000
-    high_orders,high_bins_count,high_win_size=3,5000,1
-    low_orders,low_bins_count,low_win_size=1,4000,3
-    markov_alg=Markov_alg(online_file,offline_file,offline_audio_thd,high_orders,high_bins_count,high_win_size,low_orders,low_bins_count,low_win_size)
+    for i in range(2,10):
+        for j in range(1,10-i):
+            high_orders,high_bins_count,high_win_size=i,4000,j
+            low_orders,low_bins_count,low_win_size=1,4000,i+j-1
+            markov_alg=Markov_alg(online_file,offline_file,offline_audio_thd,high_orders,high_bins_count,high_win_size,low_orders,low_bins_count,low_win_size)

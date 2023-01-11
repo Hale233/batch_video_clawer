@@ -28,6 +28,8 @@ class batch_clawer_mitm():
         self.video_server=conf.get("clawer","video_server")#tencent bilibili youtube
         self.player_click=int(conf.get("clawer","player_click"))
         self.ping_record_flag=int(conf.get("ping","ping_record_flag"))#是否采集时延信息
+        self.mitm_flag=int(conf.get("clawer","mitm_flag"))#是否记录mitm解密后的信息
+        self.url_csv_path=conf.get("clawer","url_csv_path")
 
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.193 Safari/537.36'}
         self.driver=self.chrome_driver_init()
@@ -45,6 +47,21 @@ class batch_clawer_mitm():
         driver.set_window_size(1000,30000)
         wait = WebDriverWait(driver, 100)
         return driver
+
+    #从csv文件中读取url并依次访问
+    def clawer_from_csv(self,video_class):
+        batch_size=self.batch_size
+        batch_count=self.batch_count
+        csv_file=open(self.url_csv_path,mode='r',encoding='utf-8')
+        csv_data=csv_file.read()
+        video_urls=csv_data.split('\n')
+        if int(len(video_urls)/batch_size) <batch_count:
+            batch_count=int(len(video_urls)/batch_size)
+
+        for i in range(0,batch_count):
+            self.video_url.clear()
+            self.video_url=video_urls[i*batch_size:((i+1)*batch_size)]
+            self.batch_down(i,video_class)
 
     #从主页面获取待爬取的视频URL
     def get_url(self,video_class,main_url):
@@ -79,7 +96,7 @@ class batch_clawer_mitm():
             #跳过短视频
             for url in raw_video_urls:
                 if str(url).__contains__('watch'):
-                    video_urls.append(url)
+                    video_urls.append("https://www.youtube.com/"+str(url))
 
         mitmProc.kill()
 
@@ -118,8 +135,9 @@ class batch_clawer_mitm():
                     pcap_file_path]
         tsharkProc = subprocess.Popen(tsharkCall, stdout=tsharkOut, executable=self.tshark_path)
 
-        mitmCall=[self.mitmproxy_path,"-s",self.mitm_py]
-        mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
+        if self.mitm_flag==1:
+            mitmCall=[self.mitmproxy_path,"-s",self.mitm_py]
+            mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
 
         try:
             for video_url in self.video_url:
@@ -156,7 +174,7 @@ class batch_clawer_mitm():
                     #video_duration=driver.find_element_by_xpath('//span[@class="bilibili-player-video-time-total"]').get_attribute() #关闭弹幕
                     
                 elif self.video_server=='youtube':
-                    video_url="https://www.youtube.com/"+video_url
+                    #video_url="https://www.youtube.com/"+video_url
                     while True:
                         try:
                             time.sleep(3)
@@ -196,15 +214,17 @@ class batch_clawer_mitm():
         except:
             print("URL error")
         
-        mitmProc.kill()
+        if self.mitm_flag==1:
+            mitmProc.kill()
         time.sleep(30)
         tsharkProc.kill()
         time.sleep(5)
         #整理文件
-        new_mitm_path=self.root_path + video_name + "\\mitm\\"+time_name+"\\"
-        if not os.path.exists(self.root_path + video_name + "\\mitm\\"):
-            os.makedirs(self.root_path + video_name + "\\mitm\\")
-        os.rename(self.mitm_record_path,new_mitm_path)
+        if self.mitm_flag==1:
+            new_mitm_path=self.root_path + video_name + "\\mitm\\"+time_name+"\\"
+            if not os.path.exists(self.root_path + video_name + "\\mitm\\"):
+                os.makedirs(self.root_path + video_name + "\\mitm\\")
+            os.rename(self.mitm_record_path,new_mitm_path)
         
         if self.ping_record_flag==1:
             new_ping_path=self.root_path + video_name + "\\ping\\"+time_name+"\\"
@@ -232,11 +252,12 @@ class batch_clawer_mitm():
         return url,label,duration
 
 if __name__ == '__main__':
-    conf_path="E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\vdieo_title_clawer.conf"
+    conf_path="E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\video_title_clawer.conf"
     clawer=batch_clawer_mitm(conf_path)
 
+    clawer.clawer_from_csv("QUIC")
     #clawer.get_url("donghua","https://www.bilibili.com/v/douga/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.1")
-    clawer.get_url("yinyue","https://www.bilibili.com/v/music/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.9")
+    #clawer.get_url("yinyue","https://www.bilibili.com/v/music/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.9")
     #clawer.get_url("zhishi","https://www.bilibili.com/v/knowledge/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.51")
     #clawer.get_url("shishang","https://www.bilibili.com/v/fashion/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.73")
     #clawer.get_url("yule","https://www.bilibili.com/v/ent/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.83")

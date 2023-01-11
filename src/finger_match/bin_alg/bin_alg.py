@@ -4,8 +4,8 @@ class Bin_alg():
         self.online_chunk_dict={}
         self.offline_chunk_dict={}
         self.on_off_twain_list=[]
-        self.video_chunk_size_max=2500000.0
-        self.video_chunk_size_min=600000.0
+        self.video_chunk_size_max=2200000.0
+        self.video_chunk_size_min=700000.0
         self.online_chunk_dict=self.get_dict_data(online_chunk_path)
         self.offline_chunk_dict=self.get_dict_data(offline_chunk_path)
         self.on_off_chunk_match()
@@ -176,11 +176,11 @@ class Bin_alg():
     def res_avg_bin_analysis(self):
         record_path="/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/dynamic_res_avg_bin_analysis.csv"
         record_file=open(record_path,mode='w',encoding='utf-8')
-        for i in range(1000,100000,1000):
+        for i in range(100,10000,100):
             print(i)
             on_off_bin_list=self.dynamic_res_average_bins_div(i)
             match_success_count=self.bin_alg_eval(on_off_bin_list)
-            record_file.write(str(match_success_count)+',')
+            record_file.write(str(i)+','+str(38008-match_success_count)+',')
             record_file.write('\n')
             '''static
             for j in range(0,6000,1000):
@@ -207,12 +207,14 @@ class Bin_alg():
             X.append(datas[0])
             Y.append(datas[1])
         plt.plot(X,Y)
-        plt.show()
+        #plt.show()
+        for i in range(0,len(X)):
+            print (str(X[i])+','+str(Y[i]))
         #bias=0.00135177*offline_chunk+1119
 
 if __name__ == '__main__':
-    bin_alg=Bin_alg("/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/online_encrypted_finger_seq.csv","/Users/hale/PycharmProjects/batch_video_clawer/data/chunk_list/offline_chunk_list.csv")
-    #bin_alg.chunksize_res_relation_analysis()
+    bin_alg=Bin_alg('./data/chunk_list/online_encrypted_finger_seq.csv','./data/chunk_list/offline_chunk_list.csv')
+    bin_alg.chunksize_res_relation_analysis()
 
     #on_off_bin_list=bin_alg.dynamic_res_average_bins_div(820)
     #match_success_count=bin_alg.bin_alg_eval(on_off_bin_list)
@@ -221,6 +223,6 @@ if __name__ == '__main__':
 
     #bin_alg.on_off_chunk_diffvall_record()
 
-    bin_alg.on_off_chunk_record()
+    #bin_alg.on_off_chunk_record()
 
     
