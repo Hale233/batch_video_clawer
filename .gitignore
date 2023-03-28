@@ -8,6 +8,10 @@
 *.vscode
 /chunk_size_analysis
 *~$*
-*DS_Store
+*DS_Store*
 .DS_Store
 data/.DS_Store
+/venv
+.DS_Store
+data/.DS_Store
+src/.DS_Store

@@ -94,6 +94,7 @@ class Finger():
                 video_range_beg=int(video_range.split("-")[0])
                 video_range_end=int(video_range.split("-")[1])
                 if response_head.find("'Content-Type', b'video")!=-1:
+                    video_itag_val=Video_itag_val(video_range_beg,video_range_end,int(video_range_end-video_range_beg),file_names[i],"video")
                     video_itag_val=Video_itag_val(video_range_beg,video_range_end,int(lines[0]),file_names[i],"video")
                 elif response_head.find("'Content-Type', b'audio")!=-1:
                     #video_itag_val=Video_itag_val(video_range_beg,video_range_end,int(lines[0]),file_names[i],"audio")

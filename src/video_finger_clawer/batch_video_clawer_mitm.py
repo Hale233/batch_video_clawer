@@ -88,7 +88,7 @@ class batch_clawer_mitm():
         video_urls=[]
         if self.video_server=='bilibili':
             #video_urls =driver.find_element_by_xpath('//div[@class="spread-module"]/a').get_attribute("href")
-            video_urls = parseHtml.xpath('//div[@class="spread-module"]/a/@href')#bilibili
+            video_urls = parseHtml.xpath('//div[@class="bili-video-card__wrap __scale-wrap"]/a/@href')#bilibili
         elif self.video_server=='tencent':
             video_urls = parseHtml.xpath('//div[@class="list_item"]/a/@href')#tencent
         elif self.video_server=='youtube':
@@ -252,7 +252,8 @@ class batch_clawer_mitm():
         return url,label,duration
 
 if __name__ == '__main__':
-    conf_path="E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\video_title_clawer.conf"
+    #conf_path="E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\video_title_clawer.conf"
+    conf_path="./bin/video_title_clawer_mac.conf"
     clawer=batch_clawer_mitm(conf_path)
 
     clawer.clawer_from_csv("QUIC")
