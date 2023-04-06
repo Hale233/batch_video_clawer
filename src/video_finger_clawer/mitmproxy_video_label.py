@@ -13,13 +13,17 @@ class label_core:
         self.video_streams={}
         self.mitm_record_path=conf.get("record_path","mitm_record_path") #mitm记录的文件位置
         self.ping_record_path=conf.get("record_path","ping_record_path")  #ping文件记录位置
-        self.video_server=conf.get("clawer","video_server")#bilibili    youtube
-
+ 
         self.ping_record_flag=int(conf.get("ping","ping_record_flag"))
         self.ping_timeout=float(conf.get("ping","ping_timeout"))
         self.ping_interval=float(conf.get("ping","ping_interval"))
         self.ping_count=int(conf.get("ping","ping_count"))
         self.ping_size=int(conf.get("ping","ping_size"))
+        video_parse_conf_file_path=conf.get("clawer","video_parse_conf_file_path")
+        
+        conf.read(video_parse_conf_file_path,encoding='UTF-8')
+        self.video_request_fea =str(conf.get("mitm","video_request_fea")).split(',')
+        self.content_len=conf.get("mitm","content_lenth")
 
         if not os.path.exists(self.mitm_record_path):
             os.makedirs(self.mitm_record_path)
@@ -31,12 +35,10 @@ class label_core:
         request = flow.request
         response=flow.response
         record_file=open(record_file_path,mode='a+',encoding='utf-8')
-        if self.video_server=='bilibili':
-            record_file.write(str(response.headers["content-length"])+'\n')#bilibili
-        elif self.video_server=='tencent':
-            record_file.write(str(response.headers["Content-Length"])+'\n')#tencent
-        elif self.video_server=='youtube':
-            record_file.write(str(response.headers["Content-Length"])+'\n')#youtube
+        if self.content_len!='':
+            record_file.write(str(response.headers[self.content_len])+'\n')
+        else:
+            record_file.write('-1\n')
         record_file.write(str(request.url)+'\n')#请求头
         record_file.write(str(response.headers)+'\n')#响应头
         record_file.write('------------------------\n')
@@ -44,19 +46,16 @@ class label_core:
     def response(self,flow):
         # 获取请求和响应对象
         request = flow.request
-        response=flow.response
-        video_flag=0
-        # 实例化输出类
-        #info = ctx.log.info
-        if self.video_server=='bilibili':
-            if str(request.url).__contains__('m4s') and str(response.headers).__contains__('content-range') and str(response.headers).__contains__('content-length'):#bilibili
-                video_flag=1
-        elif self.video_server=='tencent':
-            if str(request.url).__contains__('ts') and str(request.url).__contains__('start') and str(request.url).__contains__('end') and str(response.headers).__contains__('Content-Length'):#tencent
-                video_flag=1
-        elif self.video_server=='youtube':
-            if str(request.url).__contains__('videoplayback') and str(request.url).__contains__('range=') and str(response.headers).__contains__('Content-Type') and str(response.headers).__contains__('Content-Length'):
-                video_flag=1
+        #response=flow.response
+        video_flag=1
+        #info = ctx.log.info # 实例化输出类
+
+        #视频流标注
+        for i in range(len(self.video_request_fea)):
+            if str(request.url).__contains__(self.video_request_fea[i]):
+                pass
+            else :
+                video_flag=0
         
         if video_flag==1:
             #info('---------------------response---------------------')

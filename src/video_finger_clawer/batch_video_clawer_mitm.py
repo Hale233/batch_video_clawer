@@ -8,26 +8,29 @@ import os.path
 from lxml import etree
 import configparser
 from selenium.webdriver.common.by import By
+from video_parse_conf import Video_parse
 
-class batch_clawer_mitm():
+class Batch_clawer_mitm():
     def __init__(self,conf_path) -> None:
         conf= configparser.ConfigParser()
         conf.read(conf_path,encoding='UTF-8')
+        #sofware_path
         self.tshark_interface_number =conf.get("sofware_path","tshark_interface_number") #"iphone_4g"  #tshark捕包的网络接口名字
         self.chrome_driver_path =conf.get("sofware_path","chrome_driver_path")   #chromdriver位置 
         self.tshark_path =conf.get("sofware_path","tshark_path")  #TSHARK位置
         self.mitmproxy_path=conf.get("sofware_path","mitmproxy_path") #mitmdump 可执行文件位置
         self.mitm_py=conf.get("sofware_path","mitm_py")#mitm.py文件存放位置
         self.chrome_user_data_path=conf.get("sofware_path","chrome_user_data_path")
-
+        #record_path
         self.root_path =conf.get("record_path","root_path")  #记录根目录
         self.mitm_record_path=conf.get("record_path","mitm_record_path") #mitm记录的文件位置
         self.ping_record_path=conf.get("record_path","ping_record_path")  #ping文件记录位置
-        
+        #clawer
+        self.video_parse_conf_file_path=conf.get("clawer","video_parse_conf_file_path")
+        self.clawer_type=int(conf.get("clawer","clawer_type"))
         self.time_duration=int(conf.get("clawer","time_duration"))    #每一个视频播放时长，单位秒
         self.batch_size=int(conf.get("clawer","batch_size"))     #每一个pcap文件中包含的视频个数,称为一个batch
         self.batch_count=int(conf.get("clawer","batch_count"))      #总共播放多少个batch
-        self.video_server=conf.get("clawer","video_server")#tencent bilibili youtube
         self.player_click=int(conf.get("clawer","player_click"))
         self.ping_record_flag=int(conf.get("ping","ping_record_flag"))#是否采集时延信息
         self.mitm_flag=int(conf.get("clawer","mitm_flag"))#是否记录mitm解密后的信息
@@ -35,6 +38,8 @@ class batch_clawer_mitm():
         self.screenshot_flag=int(conf.get("clawer","screenshot_flag"))#是否记录截图
         self.url_csv_path=conf.get("clawer","url_csv_path")
         self.clawer_video_resolution=str(conf.get("clawer","clawer_video_resolution")).split(',')
+        #初始化视频解析类
+        self.video_parse=Video_parse(self.video_parse_conf_file_path)
 
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.193 Safari/537.36'}
         self.driver=self.chrome_driver_init()
@@ -53,7 +58,7 @@ class batch_clawer_mitm():
         wait = WebDriverWait(driver, 100)
         return driver
 
-    #持续访问直到成功
+    #持续访问URL直到成功
     def loop_get_url(self,video_url):
         while True:
             try:
@@ -67,16 +72,8 @@ class batch_clawer_mitm():
     def player_click_fun(self):
         if self.player_click!=1:
             return
-        player_xpath=''
+        player_xpath=self.video_parse.video_player_button
         try:
-            if self.video_server=='bilibili':
-                player_xpath="player"
-            elif self.video_server=='tencent':
-                pass
-            elif self.video_server=='youtube':
-                player_xpath="ytp-play-button"
-            else:
-                pass
             if player_xpath!='':
                 self.driver.find_element_by_class_name(player_xpath).click()
         except:
@@ -84,17 +81,7 @@ class batch_clawer_mitm():
 
     #获取视频时长
     def get_video_duration(self):
-        duration_xpath=''
-        if self.video_server=='bilibili':
-            duration_xpath='//span[@class="bilibili-player-video-time-total"]/text()'
-        elif self.video_server=='tencent':
-            duration_xpath='//txpdiv[@class="txp_time_duration"]/text()'
-        elif self.video_server=='youtube':
-            #duration_xpath='//span[@class="ytp-time-duration"]/text()'
-            duration_xpath='//span[starts-with(@class,"ytp-time-duration")]/text()'
-        else:
-            pass
-        
+        duration_xpath=self.video_parse.duration_xpath
         try:
             if duration_xpath!='':
                 #video_duration=self.driver.find_element_by_xpath(duration_xpath).text
@@ -110,7 +97,8 @@ class batch_clawer_mitm():
 
     #确定视频实际播放时长
     def clawer_video_duration(self,video_duration):
-        if len(video_duration)>0:
+        video_duration_s=-1
+        if len(video_duration)>0 and video_duration!=-1:
             time_data=str(video_duration[0]).split(':')
             if len(time_data)==2:
                 video_duration_s=int(time_data[0])*60+int(time_data[1])
@@ -127,26 +115,39 @@ class batch_clawer_mitm():
         self.batch_count=1
         self.video_url.clear()
         self.video_url.append(url)
-        self.video_fingerprint_down(0,video_class)
+        if self.clawer_type==0:
+            self.video_fingerprint_down(0,video_class)
+        else:
+            self.batch_down(0,video_class)
 
     #从csv文件中读取url并依次访问
     def clawer_from_csv(self,video_class):
-        batch_size=self.batch_size
+        if self.clawer_type==0:
+            batch_size=1
+        else:
+            batch_size=self.batch_size
         batch_count=self.batch_count
         csv_file=open(self.url_csv_path,mode='r',encoding='utf-8')
         csv_data=csv_file.read()
         video_urls=csv_data.split('\n')
+
         if int(len(video_urls)/batch_size) <batch_count:
             batch_count=int(len(video_urls)/batch_size)
 
         for i in range(0,batch_count):
             self.video_url.clear()
             self.video_url=video_urls[i*batch_size:((i+1)*batch_size)]
-            self.batch_down(i,video_class)
+            if self.clawer_type==0:
+                self.video_fingerprint_down(i,video_class)
+            else:
+                self.batch_down(i,video_class)
 
     #从主页面获取待爬取的视频URL
     def get_url(self,video_class,main_url):
-        batch_size=self.batch_size
+        if self.clawer_type==0:
+            batch_size=1
+        else:
+            batch_size=self.batch_size
         batch_count=self.batch_count
         #受局域网代理不会自动开启关闭影响，每次浏览时都应保证mitmproxy已运行
         if self.mitm_flag==1:
@@ -155,27 +156,29 @@ class batch_clawer_mitm():
         self.loop_get_url(main_url)
         time.sleep(5)
         #driver.execute_script('window.scrollTo(0,document.body.scrollHeight)')
-        for i in range(0,2):
+        for i in range(0,100):
             self.driver.execute_script('window.scrollBy(0,1000)')
             time.sleep(1)
+
+        #从索引页批量获取视频URL
+        video_urls=[]
         html=self.driver.page_source.encode("utf-8", "ignore")
         parseHtml = etree.HTML(html)
-
-        video_urls=[]
-        if self.video_server=='bilibili':
-            #video_urls =driver.find_element_by_xpath('//div[@class="spread-module"]/a').get_attribute("href")
-            raw_video_urls = parseHtml.xpath('//div[@class="bili-video-card__wrap __scale-wrap"]/a/@href')#bilibili
+        index_page_xpath=self.video_parse.index_page_xpath
+        if self.video_parse.video_server_name=='bilibili':
+            raw_video_urls = parseHtml.xpath(index_page_xpath)
             for url in raw_video_urls:
                 video_urls.append("https:"+str(url))
                 #video_urls.append("https://www.bilibili.com"+str(url))
-        elif self.video_server=='tencent':
-            video_urls = parseHtml.xpath('//div[@class="list_item"]/a/@href')#tencent
-        elif self.video_server=='youtube':
-            raw_video_urls = parseHtml.xpath('//a[@id="thumbnail"]/@href')#youtube
+        elif self.video_parse.video_server_name=='youtube':
+            raw_video_urls = parseHtml.xpath(index_page_xpath)
             #跳过短视频
             for url in raw_video_urls:
                 if str(url).__contains__('watch'):
                     video_urls.append("https://www.youtube.com/"+str(url))
+        else :
+            video_urls = parseHtml.xpath(index_page_xpath)
+
         if self.mitm_flag==1:
             mitmProc.kill()
 
@@ -185,13 +188,16 @@ class batch_clawer_mitm():
         for i in range(0,batch_count):
             self.video_url.clear()
             self.video_url=video_urls[i*batch_size:((i+1)*batch_size)]
-            self.batch_down(i,video_class)
+            if self.clawer_type==0:
+                self.video_fingerprint_down(i,video_class)
+            else:
+                self.batch_down(i,video_class)
 
     #获取视频分辨率信息
     def get_video_resolution(self):
         video_resolution=[]
         try:
-            if self.video_server=='youtube':
+            if self.video_parse.video_server_name=='youtube':
                 #点击设置
                 self.driver.find_element_by_xpath('//*[@aria-controls="ytp-id-18"]').click()
                 #点击画质
@@ -213,7 +219,7 @@ class batch_clawer_mitm():
 
     #切换视频分辨率
     def video_resolution_switch(self,video_resolution):
-        if self.video_server=='youtube':
+        if self.video_parse.video_server_name=='youtube':
             #点击设置
             self.driver.find_element_by_xpath('//*[@aria-controls="ytp-id-18"]').click()
             #点击画质
@@ -250,7 +256,7 @@ class batch_clawer_mitm():
                     break
         return res
 
-    #批量播放视频URL并记录pcap、ping、指纹信息
+    #指定分辨率地播放单个播放视频URL，并记录pcap、ping、指纹、截图信息
     def video_fingerprint_down(self,number,video_name):
         #创建目录
         if not os.path.exists(self.root_path):
@@ -273,6 +279,7 @@ class batch_clawer_mitm():
         video_duration=-1
         #循环访问loop_count次，直至成功
         loop_count=10
+        #获取视频的播放时长
         for i1 in range(0,loop_count):
             if video_duration==-1 or len(video_duration)==0:
                 video_duration=self.get_video_duration()
@@ -280,7 +287,7 @@ class batch_clawer_mitm():
             else:
                 print(video_duration[0])
                 break
-
+        #获取视频的分辨率信息
         video_resolution=[]
         for i2 in range(0,loop_count):
             if len(video_resolution)==0:
@@ -291,12 +298,12 @@ class batch_clawer_mitm():
         if video_duration==-1 or len(video_resolution)==0:
             print ('duration or resolution error')
             return
-
+        #确定视频采集的分辨率
         target_resolution=self.clawer_resolution_intersection(video_resolution)
         print (target_resolution)
         #确定视频实际播放时长
         duration_of_the_video=self.clawer_video_duration(video_duration)
-
+        #对待采集分辨率列表进行逐一采集
         for cur_resolution in target_resolution:
             #新建文件名
             t_time = time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -308,36 +315,35 @@ class batch_clawer_mitm():
 
             self.loop_get_url(video_url)
             time.sleep(5)
-
+            #开始记录网络流量
             if self.tshark_flag==1:
                 tsharkOut = open(pcap_file_path, "wb")
                 tsharkCall = [self.tshark_path, "-F","pcap","-i",self.tshark_interface_number, "-w", pcap_file_path]
                 tsharkProc = subprocess.Popen(tsharkCall, stdout=tsharkOut, executable=self.tshark_path)
-
+            #开始进行代理解密并记录请求信息
             if self.mitm_flag==1:
                 mitmCall=[self.mitmproxy_path,"-s",self.mitm_py]
                 mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
-            
+            #分辨率切换
             self.video_resolution_switch(cur_resolution)
+            #播放器点击开始播放
             self.player_click_fun()
-
+            #记录视频的URL、分辨率以及播放时长信息
             url_file.write(str(video_url)+','+str(cur_resolution)+','+str(duration_of_the_video)+"\n")
-            
             #播放前截图
             if self.screenshot_flag==1:
                 screenshot_png_path=screenshot_path+time_name+'beg.png'
                 self.driver.save_screenshot(screenshot_png_path)
-
             #等待视频播放
             time.sleep(duration_of_the_video)
-
             #播放后截图
             if self.screenshot_flag==1:
                 screenshot_png_path=screenshot_path+time_name+'end.png'
                 self.driver.save_screenshot(screenshot_png_path)
-
+            #结束mitm代理解密
             if self.mitm_flag==1:
                 mitmProc.kill()
+            #结束流量采集
             if self.tshark_flag==1:
                 time.sleep(15)
                 tsharkProc.kill()
@@ -355,32 +361,24 @@ class batch_clawer_mitm():
                     os.makedirs(self.root_path + video_name + "\\ping\\")
                     os.rename(self.ping_record_path,new_ping_path)
     
+    #批量采集视频流以及标注信息
     def batch_down(self,number,video_name):
-        t_time = time.strftime("%H_%M_%S")
+        #创建目录
         if not os.path.exists(self.root_path):
             os.makedirs(self.root_path)
-        # create video folder
         video_path = self.root_path + video_name + "\\pcap\\"
         if not os.path.exists(video_path) and self.tshark_flag==1:
             os.makedirs(video_path)
-        
         url_path=self.root_path+video_name+"\\url\\"
         if not os.path.exists(url_path):
             os.makedirs(url_path)
-
+        
+        t_time = time.strftime("%Y_%m_%d_%H_%M_%S")
         time_name=str(number) + "_" + t_time
         pcap_filename=time_name+".pcap"
         pcap_file_path = video_path +pcap_filename
         url_file_path=url_path+time_name
         url_file=open(url_file_path,mode='a+',encoding='utf-8')
-        
-        #获取视频时长以及分辨率信息
-        self.loop_get_url(video_url)
-        time.sleep(5)
-        self.player_click()
-        video_duration=self.get_video_duration()
-        video_resolution=self.get_video_resolution()
-        target_resolution=self.clawer_resolution_intersection(video_resolution)
 
         if self.tshark_flag==1:
             tsharkOut = open(pcap_file_path, "wb")
@@ -390,90 +388,22 @@ class batch_clawer_mitm():
         if self.mitm_flag==1:
             mitmCall=[self.mitmproxy_path,"-s",self.mitm_py]
             mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
-
-        #try:
-        m=1
-        if m==1:
+        #串行批量采集视频
+        try:
             for video_url in self.video_url:
-                wait = WebDriverWait(self.driver, 100)
-                if self.video_server=='bilibili':
-                    video_url="https:"+video_url#bilibili
-                    #video_url="https://www.bilibili.com"+video_url#bilibili
-                    while True:
-                        try:
-                            time.sleep(3)
-                            self.driver.get(video_url)
-                            break
-                        except:
-                            continue
-                    time.sleep(5)
-                    self.driver.find_element_by_class_name("player").click() #点击开始播放
-                    html=self.driver.page_source.encode("utf-8", "ignore")
-                    parseHtml = etree.HTML(html)
-                    video_duration = parseHtml.xpath('//span[@class="bilibili-player-video-time-total"]/text()')
-
-                elif self.video_server=='tencent':
-                    video_url=video_url
-                    while True:
-                        try:
-                            time.sleep(3)
-                            self.driver.get(video_url)
-                            break
-                        except:
-                            continue
-                    time.sleep(5)
-                    html=self.driver.page_source.encode("utf-8", "ignore")
-                    parseHtml = etree.HTML(html)
-                    video_duration = parseHtml.xpath('//txpdiv[@class="txp_time_duration"]/text()')
-                    #video_duration=driver.find_element_by_xpath('//span[@class="bilibili-player-video-time-total"]').get_attribute() #关闭弹幕
-                    
-                elif self.video_server=='youtube':
-                    #video_url="https://www.youtube.com/"+video_url
-                    while True:
-                        try:
-                            time.sleep(3)
-                            self.driver.get(video_url)
-                            break
-                        except:
-                            continue
-                    time.sleep(5)
-                    try:
-                        #self.driver.find_element(by=By.CLASS_NAME, value="ytp-play-button").click()
-                        if self.player_click==1:
-                            self.driver.find_element_by_class_name("ytp-play-button").click()
-                    except:
-                        print("player error")
-                    html=self.driver.page_source.encode("utf-8", "ignore")
-                    parseHtml = etree.HTML(html)
-                    video_duration = parseHtml.xpath('//span[@class="ytp-time-duration"]/text()')#获取视频时长
-                    duration_of_the_video=self.time_duration
-                    self.video_resolution_switch()
-
-                print (number)
-                print(video_url)
-                url_file.write(video_url+"\n")
-                #获取视频时长
-                if len(video_duration)>0:
-                    time_data=str(video_duration[0]).split(':')
-                    if len(time_data)==2:
-                        video_duration_s=int(time_data[0])*60+int(time_data[1])
-                    else:
-                        video_duration_s=int(time_data[0])*3600+int(time_data[1])*60+int(time_data[2])
-                else:
-                    video_duration_s=-1            
-                duration_of_the_video=self.time_duration
-                if (video_duration_s<self.time_duration and video_duration_s>0):
-                    duration_of_the_video=video_duration_s-10
-
-                time.sleep(duration_of_the_video)
-        #except:
-        else:
+                self.loop_get_url(video_url)
+                time.sleep(5)
+                self.player_click_fun()
+                url_file.write(str(video_url)+"\n")
+                #等待视频播放
+                time.sleep(self.time_duration)
+        except:
             print("URL error")
         
         if self.mitm_flag==1:
             mitmProc.kill()
         if self.tshark_flag==1:
-            time.sleep(30)
+            time.sleep(15)
             tsharkProc.kill()
             time.sleep(5)
         #整理文件
@@ -491,7 +421,7 @@ class batch_clawer_mitm():
 
 if __name__ == '__main__':
     conf_path="E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\video_title_clawer.conf"
-    clawer=batch_clawer_mitm(conf_path)
+    clawer=Batch_clawer_mitm(conf_path)
     clawer.clawer_from_url('test3.20','https://www.youtube.com/watch?v=gcShBujgsIQ')
     '''
     #clawer.clawer_from_csv("QUIC")
