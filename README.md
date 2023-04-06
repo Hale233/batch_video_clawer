@@ -69,9 +69,12 @@
 
 在完成上述配置步骤后，运行batch_video_clawer_mitm.py文件。
 
-最后运行成功后数据会被记录于root_path目录下，其中每个类别将包含三个文件夹，分别是mitm、pcap、url，具体解释如下：
+最后运行成功后数据会被记录于root_path目录下，其中每个类别将包含三个文件夹，分别是mitm、pcap、url、screenshot，具体解释如下：
 
-[Untitled](https://www.notion.so/d5cc309742174462ac855f1f90cccd6a)
+- mitm：按流记录指纹信息
+- pcap：记录原始数据包
+- url：记录视频信息
+- screenshot：记录播放过程的截图
 
 同一个视频将对应相同的三个文件夹下相同的文件名
 
@@ -88,5 +91,3 @@
 - 由于chromedriver采用用户自定义存储目录的模式，因此每次浏览的记录都会被保存下来，包括视频的缓存。因此，每次进行爬取时应及时清空浏览器缓存，防止由于存在缓存而导致视频没有按顺序请求的情况
 - 当观察到视频网页打开后暂停播放时，应调整配置文件中play_click的值
 - 在播放视频时选择1080p的分辨率
-
-[batch_video_clawer](https://www.notion.so/batch_video_clawer-3c87b401b746484aadd5f2c6c340fa72)
