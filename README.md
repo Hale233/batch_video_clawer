@@ -6,7 +6,8 @@
 
 ![Untitled](https://user-images.githubusercontent.com/49126608/230307683-8f4de303-9f64-44ba-868d-fa806a5374f9.png)
 
-[自动捕包v2.pdf](https://github.com/Hale233/batch_video_clawer/files/11185031/v2.pdf)
+![自动捕包v2](https://user-images.githubusercontent.com/49126608/230761836-b69f3ab5-bbec-40d6-ac9d-1266c8311976.jpg)
+
 
 ## 二、python环境需求：
 
