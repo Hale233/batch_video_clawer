@@ -6,6 +6,8 @@
 
 ![Untitled](https://user-images.githubusercontent.com/49126608/230307683-8f4de303-9f64-44ba-868d-fa806a5374f9.png)
 
+[自动捕包v2.pdf](https://github.com/Hale233/batch_video_clawer/files/11185031/v2.pdf)
+
 ## 二、python环境需求：
 
 - selenium 4.1.3
