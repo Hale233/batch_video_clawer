@@ -60,13 +60,15 @@ class Batch_clawer_mitm():
 
     #持续访问URL直到成功
     def loop_get_url(self,video_url):
-        while True:
+        loop_count=10
+        for i in range(0,loop_count):
             try:
                 time.sleep(3)
                 self.driver.get(video_url)
-                break
+                return 1
             except:
                 continue
+        return 0
 
     #点击视频开始播放
     def player_click_fun(self):
@@ -84,7 +86,7 @@ class Batch_clawer_mitm():
         duration_xpath=self.video_parse.duration_xpath
         try:
             if duration_xpath!='':
-                #video_duration=self.driver.find_element_by_xpath(duration_xpath).text
+                #video_duration=self.driver.find_element(By.XPATH,duration_xpath).text
                 html=self.driver.page_source.encode("utf-8", "ignore")
                 parseHtml = etree.HTML(html)
                 video_duration=parseHtml.xpath(duration_xpath)
@@ -92,7 +94,7 @@ class Batch_clawer_mitm():
             video_duration=-1
             print('get video duration error')
         
-        #video_duration=self.driver.find_element_by_xpath(duration_xpath).text
+        #video_duration=self.driver.find_element(By.XPATH,duration_xpath).text
         return video_duration
 
     #确定视频实际播放时长
@@ -129,7 +131,7 @@ class Batch_clawer_mitm():
         batch_count=self.batch_count
         csv_file=open(self.url_csv_path,mode='r',encoding='utf-8')
         csv_data=csv_file.read()
-        video_urls=csv_data.split('\n')
+        video_urls=csv_data.split('\n')[1:]
 
         if int(len(video_urls)/batch_size) <batch_count:
             batch_count=int(len(video_urls)/batch_size)
@@ -199,17 +201,17 @@ class Batch_clawer_mitm():
         try:
             if self.video_parse.video_server_name=='youtube':
                 #点击设置
-                self.driver.find_element_by_xpath('//*[@aria-controls="ytp-id-18"]').click()
+                self.driver.find_element(By.XPATH,'//*[@aria-controls="ytp-id-18"]').click()
                 #点击画质
-                self.driver.find_element_by_xpath('//*[@id="ytp-id-18"]//*[@class="ytp-menu-label-secondary"]').click()
+                self.driver.find_element(By.XPATH,'//*[@id="ytp-id-18"]//*[@class="ytp-menu-label-secondary"]').click()
                 time.sleep(0.5)
                 #获取分辨率信息
-                #info=self.driver.find_element_by_xpath('//*[@id="ytp-id-18"]//*[@class="ytp-menuitem-label"]/div/span').text
+                #info=self.driver.find_element(By.XPATH,'//*[@id="ytp-id-18"]//*[@class="ytp-menuitem-label"]/div/span').text
                 html=self.driver.page_source.encode("utf-8", "ignore")
                 parseHtml = etree.HTML(html)
                 video_resolution = parseHtml.xpath('//*[@id="ytp-id-18"]//*[@class="ytp-menuitem-label"]/div/span/text()')
                 #复原
-                self.driver.find_element_by_xpath('//*[@aria-controls="ytp-id-18"]').click()
+                self.driver.find_element(By.XPATH,'//*[@aria-controls="ytp-id-18"]').click()
             else:
                 pass
         except:
@@ -221,15 +223,15 @@ class Batch_clawer_mitm():
     def video_resolution_switch(self,video_resolution):
         if self.video_parse.video_server_name=='youtube':
             #点击设置
-            self.driver.find_element_by_xpath('//*[@aria-controls="ytp-id-18"]').click()
+            self.driver.find_element(By.XPATH,'//*[@aria-controls="ytp-id-18"]').click()
             #点击画质
-            self.driver.find_element_by_xpath('//*[@id="ytp-id-18"]//*[@class="ytp-menu-label-secondary"]').click()
+            self.driver.find_element(By.XPATH,'//*[@id="ytp-id-18"]//*[@class="ytp-menu-label-secondary"]').click()
             time.sleep(0.5)
             #切换分辨率
             element_path='//*[@id="ytp-id-18"]//*[@class="ytp-menuitem-label"]/div/span[text()=\''+str(video_resolution).strip()+'\']'
-            self.driver.find_element_by_xpath(element_path).click()
+            self.driver.find_element(By.XPATH,element_path).click()
             #复原
-            self.driver.find_element_by_xpath('//*[@aria-controls="ytp-id-18"]').click()
+            self.driver.find_element(By.XPATH,'//*[@aria-controls="ytp-id-18"]').click()
 
     #目标分辨率与存在视频本身包含的分辨率取交集，作为最后的捕获分辨率
     def clawer_resolution_intersection(self,online_video_resolution):
@@ -271,11 +273,21 @@ class Batch_clawer_mitm():
         if not os.path.exists(screenshot_path) and self.screenshot_flag==1:
             os.makedirs(screenshot_path)
         
+        if self.mitm_flag==1:
+            mitmCall=[self.mitmproxy_path]
+            mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
+
         #获取视频时长以及分辨率信息
         video_url=self.video_url[0]
-        self.loop_get_url(video_url)
+        if self.loop_get_url(video_url)==0:
+            print ('get URL error')
+            if self.mitm_flag==1:
+                mitmProc.kill()
+            return
+
         time.sleep(3)
         self.player_click_fun()
+
         video_duration=-1
         #循环访问loop_count次，直至成功
         loop_count=10
@@ -294,7 +306,8 @@ class Batch_clawer_mitm():
                 video_resolution=self.get_video_resolution()
                 time.sleep(1)
         print (video_resolution)
-
+        if self.mitm_flag==1:
+            mitmProc.kill()
         if video_duration==-1 or len(video_resolution)==0:
             print ('duration or resolution error')
             return
@@ -312,8 +325,7 @@ class Batch_clawer_mitm():
             pcap_file_path = video_path +pcap_filename
             url_file_path=url_path+time_name
             url_file=open(url_file_path,mode='a+',encoding='utf-8')
-
-            self.loop_get_url(video_url)
+            
             time.sleep(5)
             #开始记录网络流量
             if self.tshark_flag==1:
@@ -324,6 +336,8 @@ class Batch_clawer_mitm():
             if self.mitm_flag==1:
                 mitmCall=[self.mitmproxy_path,"-s",self.mitm_py]
                 mitmProc=subprocess.Popen(mitmCall,executable=self.mitmproxy_path)
+            self.loop_get_url(video_url)
+            time.sleep(5)
             #分辨率切换
             self.video_resolution_switch(cur_resolution)
             #播放器点击开始播放
@@ -422,7 +436,8 @@ class Batch_clawer_mitm():
 if __name__ == '__main__':
     conf_path="E:\\code_project\\video_title_classification\\batch_video_clawer\\bin\\video_title_clawer.conf"
     clawer=Batch_clawer_mitm(conf_path)
-    clawer.clawer_from_url('test3.20','https://www.youtube.com/watch?v=gcShBujgsIQ')
+    clawer.clawer_from_url('test3.20','https://www.youtube.com/watch?v=-l8twqkdQXw')
+    #clawer.clawer_from_csv('VBR_dataset1')
     '''
     #clawer.clawer_from_csv("QUIC")
     #clawer.get_url("donghua","https://www.bilibili.com/v/douga/?spm_id_from=333.5.b_7072696d6172794368616e6e656c4d656e75.1")
